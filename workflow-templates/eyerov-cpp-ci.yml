@@ -1,0 +1,77 @@
+# ==============================================================
+# eyeROV C++ Driver CI Template
+# ==============================================================
+#
+# WHAT TO CHANGE — search for "your_package_name" and replace
+# with your actual ROS2 package name (e.g. oculus_sonar_driver)
+#
+# Occurrences to replace (3 total):
+#   1. "Checkout your_package_name" step name
+#   2. path: src/your_package_name
+#   3. --packages-select your_package_name (2 places)
+#
+# SECRETS — ROS2_RELEASE_TOKEN is set org-wide. Nothing to add.
+# ==============================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container:
+      image: osrf/ros:jazzy-simulation-noble
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # ── CHANGE: replace "your_package_name" ──────────────────
+      - name: Checkout your_package_name
+        uses: actions/checkout@v4
+        with:
+          path: src/your_package_name
+      # ─────────────────────────────────────────────────────────
+
+      - name: Checkout eyerov_interfaces
+        uses: actions/checkout@v4
+        with:
+          repository: eyerov/eyerov_interfaces
+          token: ${{ secrets.ROS2_RELEASE_TOKEN }}
+          ref: main
+          path: src/eyerov_interfaces
+
+      - name: Install system and ROS dependencies
+        run: |
+          apt-get update -q
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths src --ignore-src -r -y
+
+      # ── CHANGE: replace "your_package_name" ──────────────────
+      - name: Build workspace
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --symlink-install \
+            --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            --packages-select your_package_name eyerov_interfaces
+      # ─────────────────────────────────────────────────────────
+
+      # ── CHANGE: replace "your_package_name" ──────────────────
+      - name: Run tests
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source install/setup.bash
+          colcon test \
+            --packages-select your_package_name \
+            --event-handlers console_cohesion+
+          colcon test-result --verbose
+      # ─────────────────────────────────────────────────────────

@@ -1,0 +1,80 @@
+# ==============================================================
+# eyeROV Auto Release Template
+# ==============================================================
+#
+# NOTHING TO CHANGE — works as-is for every driver repo.
+#
+# HOW IT WORKS:
+#   On every merge to main it reads commit messages since the
+#   last tag and bumps the version automatically:
+#
+#   Feat!: or Fix!:          → MAJOR (breaking change)  v1.0.0 → v2.0.0
+#   Feat:                    → MINOR (new feature)      v1.0.0 → v1.1.0
+#   Fix:  Tweak:  Perf:      → PATCH (bug fix)          v1.0.0 → v1.0.1
+#   Chore: Test: Docs: Ref:  → no tag (maintenance)
+#
+#   First ever tag starts at v0.1.0 (or v1.0.0 for a Feat!:)
+#
+# SECRETS — ROS2_RELEASE_TOKEN is set org-wide. Nothing to add.
+# ==============================================================
+
+name: Auto Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  auto-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.ROS2_RELEASE_TOKEN }}
+
+      - name: Determine bump level from commit types
+        id: bump
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+
+          COMMITS=$(git log "${LAST_TAG}..HEAD" --pretty=format:"%s")
+          BUMP="none"
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^(Feat!|Fix!): ]]; then
+              BUMP="major"; break
+            elif [[ "$line" =~ ^Feat: ]] && [[ "$BUMP" != "major" ]]; then
+              BUMP="minor"
+            elif [[ "$line" =~ ^(Fix|Tweak|Perf): ]] \
+              && [[ "$BUMP" != "major" && "$BUMP" != "minor" ]]; then
+              BUMP="patch"
+            fi
+          done <<< "$COMMITS"
+          echo "level=$BUMP" >> $GITHUB_OUTPUT
+
+      - name: Compute new semver tag
+        if: steps.bump.outputs.level != 'none'
+        id: newtag
+        run: |
+          LAST="${{ steps.bump.outputs.last_tag }}"
+          LAST="${LAST#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST"
+          case "${{ steps.bump.outputs.level }}" in
+            major) NEW="v$((MAJOR+1)).0.0" ;;
+            minor) NEW="v${MAJOR}.$((MINOR+1)).0" ;;
+            patch) NEW="v${MAJOR}.${MINOR}.$((PATCH+1))" ;;
+          esac
+          echo "tag=$NEW" >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        if: steps.bump.outputs.level != 'none'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.newtag.outputs.tag }}"
+          git push origin "${{ steps.newtag.outputs.tag }}"

@@ -1,0 +1,142 @@
+# ==============================================================
+# eyeROV Python Driver CI Template
+# ==============================================================
+#
+# WHAT TO CHANGE — search for "your_package_name" and replace
+# with your actual ROS2 package name (e.g. seatrac_usbl_driver)
+#
+# Occurrences to replace (4 total):
+#   1. "Checkout your_package_name" step name
+#   2. path: src/your_package_name
+#   3. --packages-select your_package_name
+#   4. pytest src/your_package_name/test and --cov=your_package_name
+#
+# REQUIREMENTS FILE — create requirements.txt in your repo root
+# listing any pip dependencies your driver needs. Example:
+#   nucleus_driver==1.7.6
+#   crcmod==1.7
+#
+# COVERAGE THRESHOLD — default is 80%. Change --fail-under=80
+# if your package needs a different threshold.
+#
+# SECRETS — ROS2_RELEASE_TOKEN is set org-wide. Nothing to add.
+# ==============================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container:
+      image: osrf/ros:jazzy-simulation-noble
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # ── CHANGE: replace "your_package_name" ──────────────────
+      - name: Checkout your_package_name
+        uses: actions/checkout@v4
+        with:
+          path: src/your_package_name
+      # ─────────────────────────────────────────────────────────
+
+      # Checks out custom msgs — token is set org-wide, do not change
+      - name: Checkout eyerov_interfaces
+        uses: actions/checkout@v4
+        with:
+          repository: eyerov/eyerov_interfaces
+          token: ${{ secrets.ROS2_RELEASE_TOKEN }}
+          ref: main
+          path: src/eyerov_interfaces
+
+      - name: Install system and ROS dependencies
+        run: |
+          apt-get update -q
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths src --ignore-src -r -y
+
+      # Installs pytest + your driver's pip deps from requirements.txt
+      - name: Install Python dependencies
+        run: |
+          apt-get install -y python3-pip
+          python3 -m pip install --break-system-packages pytest pytest-cov
+          python3 -m pip install --break-system-packages \
+            -r src/your_package_name/requirements.txt
+
+      # ── CHANGE: replace "your_package_name" ──────────────────
+      - name: Build workspace
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --symlink-install \
+            --packages-select your_package_name eyerov_interfaces
+      # ─────────────────────────────────────────────────────────
+
+      # ── CHANGE: replace "your_package_name" (2 places) ───────
+      - name: Run tests and collect coverage
+        run: |
+          set -o pipefail
+          source /opt/ros/jazzy/setup.bash
+          source install/setup.bash
+          pytest src/your_package_name/test \
+            --cov=your_package_name \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:coverage_html \
+            --cov-report=term-missing \
+            -v 2>&1 | tee pytest-coverage.txt
+      # ─────────────────────────────────────────────────────────
+
+      # Add label "emergency-hotfix" to a PR to bypass this gate
+      - name: Enforce coverage gate (>= 80%)
+        if: >-
+          !contains(
+            toJSON(github.event.pull_request.labels.*.name),
+            'emergency-hotfix'
+          )
+        run: python3 -m coverage report --fail-under=80
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.run_id }}
+          path: |
+            pytest-coverage.txt
+            coverage_html/
+          retention-days: 30
+
+  # Posts coverage table as a comment on the PR after every push
+  post-coverage-comment:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && !cancelled()
+
+    steps:
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-${{ github.run_id }}
+
+      - name: Post coverage comment on PR
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: pytest-coverage.txt
+          title: Test Coverage Report
+          badge-title: Coverage
+          hide-badge: false
+          hide-report: false
+          create-new-comment: false
+          hide-comment: false
+          report-only-changed-files: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,6 @@
+{
+    "name": "eyeROV Release",
+    "description": "Creates GitHub Release with changelog and opens submodule bump PR in eyerov_payloads. Replace your_package_name everywhere.",
+    "iconName": "octicon-rocket",
+    "categories": ["Release"]
+}

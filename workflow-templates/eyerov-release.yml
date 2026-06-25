@@ -1,0 +1,88 @@
+# ==============================================================
+# eyeROV Release Template
+# ==============================================================
+#
+# WHAT TO CHANGE — search for "your_package_name" and replace
+# with your actual ROS2 package name (5 occurrences total)
+#
+# HOW IT WORKS:
+#   Triggers when auto-release pushes a v*.*.* tag.
+#   1. Generates a changelog from git log
+#   2. Creates a GitHub Release with the changelog
+#   3. Opens a submodule bump PR in eyerov_payloads
+#
+# SECRETS — ROS2_RELEASE_TOKEN is set org-wide. Nothing to add.
+# ==============================================================
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get previous tag for changelog range
+        id: prev
+        run: |
+          PREV=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "tag=$PREV" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        run: |
+          CURRENT="${{ github.ref_name }}"
+          PREV="${{ steps.prev.outputs.tag }}"
+          if [[ -n "$PREV" ]]; then
+            git log "${PREV}..${CURRENT}" --pretty=format:"- %s (%h)" > changelog.txt
+          else
+            git log "${CURRENT}" --pretty=format:"- %s (%h)" > changelog.txt
+          fi
+
+      # ── CHANGE: replace "your_package_name" in name: ─────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "your_package_name ${{ github.ref_name }}"
+          body_path: changelog.txt
+          token: ${{ secrets.GITHUB_TOKEN }}
+      # ─────────────────────────────────────────────────────────
+
+      # ── CHANGE: replace "your_package_name" (4 places) ───────
+      - name: Open bump PR in eyerov_payloads
+        env:
+          GH_TOKEN: ${{ secrets.ROS2_RELEASE_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          BRANCH="bump/your_package_name-${TAG}"
+
+          git clone \
+            "https://x-access-token:${GH_TOKEN}@github.com/eyerov/eyerov_payloads.git" \
+            payloads_repo
+          cd payloads_repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${BRANCH}"
+          git -C src/your_package_name fetch --tags
+          git -C src/your_package_name checkout "${TAG}"
+          git add src/your_package_name
+          git commit -m "Chore: Bump your_package_name to ${TAG}"
+          git push origin "${BRANCH}"
+          gh pr create \
+            --repo eyerov/eyerov_payloads \
+            --head "${BRANCH}" \
+            --base main \
+            --title "Chore: Bump your_package_name to ${TAG}" \
+            --body "Automated submodule bump — your_package_name → ${TAG}. Changelog: https://github.com/eyerov/your_package_name/releases/tag/${TAG}"
+      # ─────────────────────────────────────────────────────────

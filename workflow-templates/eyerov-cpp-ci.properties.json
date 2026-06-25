@@ -1,0 +1,6 @@
+{
+    "name": "eyeROV C++ Driver CI",
+    "description": "Build and colcon test for ament_cmake ROS2 drivers. Replace your_package_name everywhere.",
+    "iconName": "octicon-cpu",
+    "categories": ["ROS2", "C++", "Testing"]
+}
