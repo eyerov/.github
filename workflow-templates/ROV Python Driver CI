@@ -1,1 +1,0 @@
-Build, pytest and coverage gate for ament_python ROS2 drivers. Replace your_package_name everywhere. Requires requirements.txt in repo root
