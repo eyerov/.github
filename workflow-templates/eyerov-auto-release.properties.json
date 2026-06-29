@@ -1,6 +1,5 @@
 {
     "name": "eyeROV Auto Release",
     "description": "Pushes a semver tag on every merge to main. Feat!→major, Feat:→minor, Fix:/Tweak:/Perf:→patch. Nothing to change.",
-    "iconName": "octicon-tag",
     "categories": ["Release"]
 }
