@@ -30,12 +30,10 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
   build-and-test:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     container:
       image: osrf/ros:jazzy-simulation-noble
@@ -118,6 +116,8 @@ jobs:
 
   # Posts coverage table as a comment on the PR after every push
   post-coverage-comment:
+    permissions:
+      pull-requests: write
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && !cancelled()
@@ -129,7 +129,7 @@ jobs:
           name: coverage-${{ github.run_id }}
 
       - name: Post coverage comment on PR
-        uses: MishaKav/pytest-coverage-comment@main
+        uses: MishaKav/pytest-coverage-comment@e48ae95fa406cefacc7fbdd79949122795569961  # main
         with:
           pytest-coverage-path: pytest-coverage.txt
           title: Test Coverage Report
