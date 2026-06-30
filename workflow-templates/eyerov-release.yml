@@ -73,10 +73,18 @@ jobs:
           cd payloads_repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
           git checkout -b "${BRANCH}"
+          if grep -qs "src/your_package_name" .gitmodules; then
+            git submodule update --init src/your_package_name
+          else
+            git submodule add \
+              "https://github.com/eyerov/your_package_name.git" \
+              src/your_package_name
+          fi
           git -C src/your_package_name fetch --tags
           git -C src/your_package_name checkout "${TAG}"
-          git add src/your_package_name
+          git add src/your_package_name .gitmodules
           git commit -m "Chore: Bump your_package_name to ${TAG}"
           git push origin "${BRANCH}"
           gh pr create \
@@ -84,5 +92,6 @@ jobs:
             --head "${BRANCH}" \
             --base main \
             --title "Chore: Bump your_package_name to ${TAG}" \
-            --body "Automated submodule bump — your_package_name → ${TAG}. Changelog: https://github.com/eyerov/your_package_name/releases/tag/${TAG}"
+            --body "Automated submodule bump — your_package_name → ${TAG}. Changelog: https://github.com/eyerov/your_package_name/releases/tag/${TAG}" \
+            || echo "PR already exists for ${BRANCH}"
       # ─────────────────────────────────────────────────────────
