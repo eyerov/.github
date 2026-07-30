@@ -19,7 +19,9 @@
 # COVERAGE THRESHOLD — default is 80%. Change --fail-under=80
 # if your package needs a different threshold.
 #
-# SECRETS — ROS2_RELEASE_TOKEN is set org-wide. Nothing to add.
+# SECRETS — CI_BOT_APP_ID and CI_BOT_APP_PRIVATE_KEY are set
+# org-wide (GitHub App used to mint the checkout token).
+# Nothing to add.
 # ==============================================================
 
 name: CI
@@ -43,6 +45,13 @@ jobs:
         shell: bash
 
     steps:
+      - name: Generate bot token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CI_BOT_APP_ID }}
+          private-key: ${{ secrets.CI_BOT_APP_PRIVATE_KEY }}
+
       # ── CHANGE: replace "your_package_name" ──────────────────
       - name: Checkout your_package_name
         uses: actions/checkout@v4
@@ -55,7 +64,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: eyerov/eyerov_interfaces
-          token: ${{ secrets.ROS2_RELEASE_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           ref: main
           path: src/eyerov_interfaces
 

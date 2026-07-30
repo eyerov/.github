@@ -11,7 +11,9 @@
 #   2. Creates a GitHub Release with the changelog
 #   3. Opens a submodule bump PR in eyerov_payloads
 #
-# SECRETS — ROS2_RELEASE_TOKEN is set org-wide. Nothing to add.
+# SECRETS — CI_BOT_APP_ID and CI_BOT_APP_PRIVATE_KEY are set
+# org-wide (GitHub App used to mint the bump-PR token).
+# Nothing to add.
 # ==============================================================
 
 name: Release
@@ -28,6 +30,13 @@ jobs:
   release:
     runs-on: [self-hosted, Linux, eyerov]
     steps:
+      - name: Generate bot token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CI_BOT_APP_ID }}
+          private-key: ${{ secrets.CI_BOT_APP_PRIVATE_KEY }}
+
       - name: Checkout with full history
         uses: actions/checkout@v4
         with:
@@ -62,7 +71,7 @@ jobs:
       # ── CHANGE: replace "your_package_name" (4 places) ───────
       - name: Open bump PR in eyerov_payloads
         env:
-          GH_TOKEN: ${{ secrets.ROS2_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           TAG="${{ github.ref_name }}"
           BRANCH="bump/your_package_name-${TAG}"
@@ -71,8 +80,8 @@ jobs:
             "https://x-access-token:${GH_TOKEN}@github.com/eyerov/eyerov_payloads.git" \
             payloads_repo
           cd payloads_repo
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "eyerov-ci-bot[bot]"
+          git config user.email "eyerov-ci-bot[bot]@users.noreply.github.com"
           git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "git@github.com:"
           git checkout -b "${BRANCH}"
           if grep -qs "your_package_name" .gitmodules; then
