@@ -3,7 +3,8 @@
 # ==============================================================
 #
 # WHAT TO CHANGE — search for "your_package_name" and replace
-# with your actual ROS2 package name (5 occurrences total)
+# with your actual ROS2 package name (6 occurrences total,
+# including the repositories list below)
 #
 # HOW IT WORKS:
 #   Triggers when auto-release pushes a v*.*.* tag.
@@ -30,12 +31,17 @@ jobs:
   release:
     runs-on: [self-hosted, Linux, eyerov]
     steps:
+      # ── CHANGE: list this repo + eyerov_payloads ─────────────
       - name: Generate bot token
         id: app-token
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.CI_BOT_APP_ID }}
           private-key: ${{ secrets.CI_BOT_APP_PRIVATE_KEY }}
+          repositories: |
+            your_package_name
+            eyerov_payloads
+      # ─────────────────────────────────────────────────────────
 
       - name: Checkout with full history
         uses: actions/checkout@v4

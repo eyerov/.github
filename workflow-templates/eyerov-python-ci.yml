@@ -5,11 +5,12 @@
 # WHAT TO CHANGE — search for "your_package_name" and replace
 # with your actual ROS2 package name (e.g. seatrac_usbl_driver)
 #
-# Occurrences to replace (4 total):
-#   1. "Checkout your_package_name" step name
-#   2. path: src/your_package_name
-#   3. --packages-select your_package_name
-#   4. pytest src/your_package_name/test and --cov=your_package_name
+# Occurrences to replace (5 total):
+#   1. "Generate bot token" repositories list — add YOUR repo name
+#   2. "Checkout your_package_name" step name
+#   3. path: src/your_package_name
+#   4. --packages-select your_package_name
+#   5. pytest src/your_package_name/test and --cov=your_package_name
 #
 # REQUIREMENTS FILE — create requirements.txt in your repo root
 # listing any pip dependencies your driver needs. Example:
@@ -45,12 +46,17 @@ jobs:
         shell: bash
 
     steps:
+      # ── CHANGE: list this repo + eyerov_interfaces ───────────
       - name: Generate bot token
         id: app-token
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.CI_BOT_APP_ID }}
           private-key: ${{ secrets.CI_BOT_APP_PRIVATE_KEY }}
+          repositories: |
+            your_package_name
+            eyerov_interfaces
+      # ─────────────────────────────────────────────────────────
 
       # ── CHANGE: replace "your_package_name" ──────────────────
       - name: Checkout your_package_name

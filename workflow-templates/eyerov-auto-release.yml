@@ -2,7 +2,9 @@
 # eyeROV Auto Release Template
 # ==============================================================
 #
-# NOTHING TO CHANGE — works as-is for every driver repo.
+# WHAT TO CHANGE — search for "your_package_name" and replace
+# with your actual ROS2 package name (1 occurrence, in the
+# repositories list below)
 #
 # HOW IT WORKS:
 #   On every merge to main it reads commit messages since the
@@ -33,12 +35,16 @@ jobs:
   auto-tag:
     runs-on: [self-hosted, Linux, eyerov]
     steps:
+      # ── CHANGE: list this repo's name ────────────────────────
       - name: Generate bot token
         id: app-token
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.CI_BOT_APP_ID }}
           private-key: ${{ secrets.CI_BOT_APP_PRIVATE_KEY }}
+          repositories: |
+            your_package_name
+      # ─────────────────────────────────────────────────────────
 
       - name: Checkout with full history
         uses: actions/checkout@v4
